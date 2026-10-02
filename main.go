@@ -1714,7 +1714,7 @@ func loadConfig() Config {
 
 var buildMALClientSecret string
 
-const appVersion = "0.2.6"
+const appVersion = "0.2.7"
 
 const (
 	githubOwner = "hyuzipt"
@@ -3302,7 +3302,7 @@ func buildActivity(title, episode, _clock, coverURL, _smallKey, _aniURL string, 
 		parts = append(parts, "Rewatching")
 	}
 	parts = append(parts, epText)
-	state := strings.Join(parts, " — ")
+	state := strings.Join(parts, " - ")
 
 	img := coverURL
 	if strings.TrimSpace(img) == "" {
