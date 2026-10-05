@@ -122,7 +122,7 @@ type simulRuntime struct {
 	cfg simulConfig
 }
 
-var simul = simulRuntime{mode: simulModeOff, status: "Off"}
+var simul = simulRuntime{mode: simulModeOff, status: "Desligado"}
 
 func simulLoadSettingsFromStore() {
 	store.mu.RLock()
@@ -160,20 +160,20 @@ func simulRefreshTray() {
 	simul.mu.Unlock()
 
 	if menuSimulStatus != nil {
-		status := "Off"
+		status := "Desligado"
 		switch mode {
 		case simulModeHost:
 			if participants <= 0 {
 				participants = 1
 			}
-			status = fmt.Sprintf("Host (%d participants)", participants)
+			status = fmt.Sprintf("Anfitrião (%d participantes)", participants)
 		case simulModeJoin:
 			if participants <= 0 {
 				participants = 1
 			}
-			status = fmt.Sprintf("Joined (%d participants)", participants)
+			status = fmt.Sprintf("Conectado (%d participantes)", participants)
 		default:
-			status = "Off"
+			status = "Desligado"
 		}
 		menuSimulStatus.SetTitle("Status: " + status)
 		if invite != "" {
@@ -241,7 +241,7 @@ func simulStopLocked() {
 	simul.lastState = simulState{}
 	simul.mode = simulModeOff
 	simulSetParticipantsLocked(0)
-	simulSetStatusLocked("Off")
+	simulSetStatusLocked("Desligado")
 }
 
 func simulStop() {
@@ -393,7 +393,7 @@ func simulStartHost(ctx context.Context) {
 	}
 	if !validateJoinCode(simul.code) {
 		simul.mu.Unlock()
-		messageBox("Koushin: Simulwatching", "Invalid host code. Please choose a code (3–18 letters/numbers).", mbOK|mbIconError)
+		messageBox("Koushin: Simulwatching", "Código do anfitrião inválido. Escolha um código com 3–18 letras/números.", mbOK|mbIconError)
 		return
 	}
 	port := simul.cfg.Port
@@ -402,7 +402,7 @@ func simulStartHost(ctx context.Context) {
 
 	simul.clients = make(map[net.Conn]struct{})
 	simulSetParticipantsLocked(1)
-	simulSetStatusLocked("Host")
+	simulSetStatusLocked("Anfitrião")
 	simul.mu.Unlock()
 	simulRefreshTray()
 
@@ -410,10 +410,10 @@ func simulStartHost(ctx context.Context) {
 	if err != nil {
 		simul.mu.Lock()
 		simulStopLocked()
-		simulSetStatusLocked("Off")
+		simulSetStatusLocked("Desligado")
 		simul.mu.Unlock()
 		simulRefreshTray()
-		messageBox("Koushin: Simulwatching", "Could not host Simulwatching:\n\n"+err.Error(), mbOK|mbIconError)
+		messageBox("Koushin: Simulwatching", "Não foi possível iniciar a sessão de Simulwatching:\n\n"+err.Error(), mbOK|mbIconError)
 		return
 	}
 
@@ -427,13 +427,13 @@ func simulStartHost(ctx context.Context) {
 	simul.mu.Lock()
 	simul.ln = ln
 	code := simul.code
-	invite := fmt.Sprintf("Invite: %s:%d  Code: %s", firstNonEmpty(publicIP0, "<your-public-ip>"), port, code)
+	invite := fmt.Sprintf("Convite: %s:%d  Código: %s", firstNonEmpty(publicIP0, "<seu-ip-público>"), port, code)
 	simul.inviteText = invite
-	simulSetStatusLocked("Host")
+	simulSetStatusLocked("Anfitrião")
 	simul.mu.Unlock()
 	simulRefreshTray()
 
-	messageBox("Koushin: Simulwatching host", invite+"\n\nIf your friend can't connect, you may need to port-forward TCP port "+strconv.Itoa(port)+" to this PC.", mbOK|mbIconInfo)
+	messageBox("Koushin: anfitrião do Simulwatching", invite+"\n\nIf your friend can't connect, you may need to port-forward TCP port "+strconv.Itoa(port)+" para este PC.", mbOK|mbIconInfo)
 
 	go func() {
 		defer logRecoveredPanic("simulStartHost.background")
@@ -473,9 +473,9 @@ func simulStartHost(ctx context.Context) {
 				}
 				simul.portMapOff = cleanup
 			}
-			invite2 := fmt.Sprintf("Invite: %s:%d  Code: %s", firstNonEmpty(publicIP, "<your-public-ip>"), port, code)
+			invite2 := fmt.Sprintf("Convite: %s:%d  Código: %s", firstNonEmpty(publicIP, "<seu-ip-público>"), port, code)
 			simul.inviteText = invite2
-			simulSetStatusLocked("Host")
+			simulSetStatusLocked("Anfitrião")
 		}
 		simul.mu.Unlock()
 		if stillHosting {
@@ -590,24 +590,24 @@ button{padding:10px 12px;font-size:16px}
 small{color:#666}
 </style></head>
 <body>
-<h2>Join Simulwatching</h2>
-<p>Enter your friend’s <b>public IP:port</b> and the <b>code</b> they see in Koushin.</p>
-<label>Host (IP:PORT)</label>
+<h2>Entrar no Simulwatching</h2>
+<p>Digite o <b>IP público:porta</b> do seu amigo e o <b>código</b> exibido no Koushin.</p>
+<label>Anfitrião (IP:PORTA)</label>
 <input id="host" placeholder="123.45.67.89:45130" />
-<label>Code</label>
-<input id="code" placeholder="3–18 letters/numbers" maxlength="18" />
-<div style="margin-top:10px"><button onclick="join()">Join</button></div>
+<label>Código</label>
+<input id="code" placeholder="3–18 letras/números" maxlength="18" />
+<div style="margin-top:10px"><button onclick="join()">Entrar</button></div>
 <p id="status"><small></small></p>
 <script>
 const statusEl = document.querySelector('#status small');
 async function join(){
   const host = document.getElementById('host').value.trim();
   const code = document.getElementById('code').value.trim();
-  statusEl.textContent = 'Connecting…';
+  statusEl.textContent = 'Conectando…';
   const res = await fetch('/api/join', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({host, code})});
   const data = await res.json();
-  if (!res.ok) { statusEl.textContent = data.error || 'Failed'; return; }
-  statusEl.textContent = 'Joined. You can close this tab.';
+  if (!res.ok) { statusEl.textContent = data.error || 'Falha'; return; }
+  statusEl.textContent = 'Conectado. Você pode fechar esta aba.';
   try { window.open('', '_self'); window.close(); } catch (e) {}
   setTimeout(() => { try { window.open('', '_self'); window.close(); } catch (e) {} }, 250);
   window.location.replace('/done');
@@ -618,12 +618,12 @@ async function join(){
 
 	mux.HandleFunc("/done", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		io.WriteString(w, `<!doctype html><html><head><meta charset="utf-8"><title>Koushin · Done</title></head>
+		io.WriteString(w, `<!doctype html><html><head><meta charset="utf-8"><title>Koushin · Concluído</title></head>
 <body style="font-family:system-ui;max-width:680px;margin:40px auto;line-height:1.5;text-align:center">
-<h2>Joined</h2>
-<p>Attempting to close this tab…</p>
+<h2>Conectado</h2>
+<p>Tentando fechar esta aba…</p>
 <script>setTimeout(() => { try { window.open('', '_self'); window.close(); } catch (e) {} }, 100);</script>
-<p><small>If it doesn't close automatically, you can close it now.</small></p>
+<p><small>Se ela não fechar automaticamente, você pode fechá-la agora.</small></p>
 </body></html>`)
 	})
 
@@ -632,7 +632,7 @@ async function join(){
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != "POST" {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			_ = json.NewEncoder(w).Encode(map[string]any{"error": "method not allowed"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "método não permitido"})
 			return
 		}
 		var body struct {
@@ -704,21 +704,21 @@ button{padding:10px 12px;font-size:16px}
 small{color:#666}
 </style></head>
 <body>
-<h2>Host Simulwatching</h2>
-<p>Choose a <b>code</b> for this session. You will enter it each time you host (Koushin does not save it).</p>
-<label>Code</label>
-<input id="code" placeholder="3–18 letters/numbers" maxlength="18" />
-<div style="margin-top:10px"><button onclick="startHosting()">Start hosting</button></div>
+<h2>Hospedar Simulwatching</h2>
+<p>Escolha um <b>código</b> para esta sessão. Você precisará digitá-lo sempre que hospedar (o Koushin não o salva).</p>
+<label>Código</label>
+<input id="code" placeholder="3–18 letras/números" maxlength="18" />
+<div style="margin-top:10px"><button onclick="startHosting()">Iniciar hospedagem</button></div>
 <p id="status"><small></small></p>
 <script>
 const statusEl = document.querySelector('#status small');
 async function startHosting(){
   const code = document.getElementById('code').value.trim();
-  statusEl.textContent = 'Starting…';
+  statusEl.textContent = 'Iniciando…';
   const res = await fetch('/api/host', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({code})});
   const data = await res.json();
-  if (!res.ok) { statusEl.textContent = data.error || 'Failed'; return; }
-  statusEl.textContent = 'Hosting started. You can close this tab.';
+  if (!res.ok) { statusEl.textContent = data.error || 'Falha'; return; }
+  statusEl.textContent = 'Hospedagem iniciada. Você pode fechar esta aba.';
   try { window.open('', '_self'); window.close(); } catch (e) {}
   setTimeout(() => { try { window.open('', '_self'); window.close(); } catch (e) {} }, 250);
   window.location.replace('/done');
@@ -729,12 +729,12 @@ async function startHosting(){
 
 	mux.HandleFunc("/done", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		io.WriteString(w, `<!doctype html><html><head><meta charset="utf-8"><title>Koushin · Done</title></head>
+		io.WriteString(w, `<!doctype html><html><head><meta charset="utf-8"><title>Koushin · Concluído</title></head>
 <body style="font-family:system-ui;max-width:680px;margin:40px auto;line-height:1.5;text-align:center">
-<h2>Hosting</h2>
-<p>Attempting to close this tab…</p>
+<h2>Hospedando</h2>
+<p>Tentando fechar esta aba…</p>
 <script>setTimeout(() => { try { window.open('', '_self'); window.close(); } catch (e) {} }, 100);</script>
-<p><small>If it doesn't close automatically, you can close it now.</small></p>
+<p><small>Se ela não fechar automaticamente, você pode fechá-la agora.</small></p>
 </body></html>`)
 	})
 
@@ -743,7 +743,7 @@ async function startHosting(){
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != "POST" {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			_ = json.NewEncoder(w).Encode(map[string]any{"error": "method not allowed"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "método não permitido"})
 			return
 		}
 		var body struct {
@@ -790,7 +790,7 @@ func simulStartJoin(ctx context.Context, host string, code string) {
 	host = strings.TrimSpace(host)
 	code = strings.TrimSpace(code)
 	if host == "" || !validateJoinCode(code) {
-		messageBox("Koushin: Simulwatching", "Invalid host or code.", mbOK|mbIconError)
+		messageBox("Koushin: Simulwatching", "Anfitrião ou código inválido.", mbOK|mbIconError)
 		return
 	}
 	simulStop()
@@ -799,14 +799,14 @@ func simulStartJoin(ctx context.Context, host string, code string) {
 	d := net.Dialer{Timeout: 5 * time.Second}
 	conn, err := d.DialContext(ctx, "tcp", host)
 	if err != nil {
-		messageBox("Koushin: Simulwatching", "Could not connect:\n\n"+err.Error(), mbOK|mbIconError)
+		messageBox("Koushin: Simulwatching", "Não foi possível conectar:\n\n"+err.Error(), mbOK|mbIconError)
 		return
 	}
 
 	_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	if err := writeSimulMsg(conn, "hello", simulHello{Code: code}); err != nil {
 		_ = conn.Close()
-		messageBox("Koushin: Simulwatching", "Handshake failed:\n\n"+err.Error(), mbOK|mbIconError)
+		messageBox("Koushin: Simulwatching", "Falha na negociação da conexão:\n\n"+err.Error(), mbOK|mbIconError)
 		return
 	}
 
@@ -815,7 +815,7 @@ func simulStartJoin(ctx context.Context, host string, code string) {
 	msg, err := readSimulMsg(dec)
 	if err != nil {
 		_ = conn.Close()
-		messageBox("Koushin: Simulwatching", "Handshake failed:\n\n"+err.Error(), mbOK|mbIconError)
+		messageBox("Koushin: Simulwatching", "Falha na negociação da conexão:\n\n"+err.Error(), mbOK|mbIconError)
 		return
 	}
 	if msg.Type == "error" {
@@ -824,12 +824,12 @@ func simulStartJoin(ctx context.Context, host string, code string) {
 			Error string `json:"error"`
 		}
 		_ = json.Unmarshal(msg.Data, &e)
-		messageBox("Koushin: Simulwatching", "Join rejected:\n\n"+strings.TrimSpace(e.Error), mbOK|mbIconError)
+		messageBox("Koushin: Simulwatching", "Entrada recusada:\n\n"+strings.TrimSpace(e.Error), mbOK|mbIconError)
 		return
 	}
 	if msg.Type != "hello_ok" {
 		_ = conn.Close()
-		messageBox("Koushin: Simulwatching", "Unexpected response from host.", mbOK|mbIconError)
+		messageBox("Koushin: Simulwatching", "Resposta inesperada do anfitrião.", mbOK|mbIconError)
 		return
 	}
 
@@ -837,7 +837,7 @@ func simulStartJoin(ctx context.Context, host string, code string) {
 	simul.mode = simulModeJoin
 	simul.conn = conn
 	simulSetParticipantsLocked(1)
-	simulSetStatusLocked("Joined")
+	simulSetStatusLocked("Conectado")
 	simul.mu.Unlock()
 	simulRefreshTray()
 
@@ -851,7 +851,7 @@ func simulStartJoin(ctx context.Context, host string, code string) {
 				simul.conn = nil
 				simul.mode = simulModeOff
 				simulSetParticipantsLocked(0)
-				simulSetStatusLocked("Off")
+				simulSetStatusLocked("Desligado")
 			}
 			simul.mu.Unlock()
 			simulRefreshTray()
@@ -1475,9 +1475,9 @@ func buildSuwayomiActivity(title, state, coverURL, smallKey, aniURL string, star
 		assets["small_image"] = strings.TrimSpace(smallKey)
 		name := strings.TrimSpace(username)
 		if name == "" {
-			name = "AniList user"
+			name = "Usuário do AniList"
 		}
-		assets["small_text"] = name + " on AniList"
+		assets["small_text"] = name + " no AniList"
 	} else {
 		assets["small_image"] = "suwayomi"
 		assets["small_text"] = "Suwayomi"
@@ -1647,11 +1647,11 @@ func (s simulState) episodeLabel() string {
 func simulModeTitle(m simulMode) string {
 	switch m {
 	case simulModeHost:
-		return "Host"
+		return "Anfitrião"
 	case simulModeJoin:
-		return "Joined"
+		return "Conectado"
 	default:
-		return "Off"
+		return "Desligado"
 	}
 }
 
@@ -2586,7 +2586,7 @@ query($search: String) {
 func searchAniList(ctx context.Context, query string, ua string) ([]mediaLite, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
-		return nil, errors.New("empty query")
+		return nil, errors.New("consulta vazia")
 	}
 	const q = `
 query($search: String) {
@@ -2634,7 +2634,7 @@ query($search: String) {
 func getAniListMediaByID(ctx context.Context, id int, ua string) (mediaLite, error) {
 	var out mediaLite
 	if id <= 0 {
-		return out, errors.New("invalid id")
+		return out, errors.New("ID inválido")
 	}
 	const q = `
 query($id: Int) {
@@ -2735,7 +2735,7 @@ func searchMAL(ctx context.Context, query string, clientID string, ua string) ([
 	query = strings.TrimSpace(query)
 	clientID = strings.TrimSpace(clientID)
 	if query == "" {
-		return nil, errors.New("empty query")
+		return nil, errors.New("consulta vazia")
 	}
 	if clientID == "" {
 		return nil, errors.New("missing MAL client id (set MAL_CLIENT_ID)")
@@ -2789,7 +2789,7 @@ func getMALAnimeByID(ctx context.Context, id int, clientID string, ua string) (m
 	var out mediaLite
 	clientID = strings.TrimSpace(clientID)
 	if id <= 0 {
-		return out, errors.New("invalid id")
+		return out, errors.New("ID inválido")
 	}
 	if clientID == "" {
 		return out, errors.New("missing MAL client id (set MAL_CLIENT_ID)")
@@ -3017,7 +3017,7 @@ func checkForUpdatesInteractive(ctx context.Context, manual bool) {
 	if err != nil {
 		if manual {
 			messageBox("Koushin: Update check failed",
-				"Could not check for updates:\n"+err.Error(),
+				"Não foi possível verificar atualizações:\n"+err.Error(),
 				mbOK|mbIconError)
 		}
 		return
@@ -3029,27 +3029,27 @@ func checkForUpdatesInteractive(ctx context.Context, manual bool) {
 	if !isNewerVersion(cur, latest) {
 		if manual {
 			messageBox("Koushin",
-				fmt.Sprintf("You are up to date.\nCurrent version: %s\nLatest version: %s", cur, latest),
+				fmt.Sprintf("Você já está usando a versão mais recente.\nVersão atual: %s\nÚltima versão: %s", cur, latest),
 				mbOK|mbIconInfo)
 		}
 		return
 	}
 
 	if menuCheckUpdate != nil {
-		menuCheckUpdate.SetTitle("Update available (" + latest + ")…")
+		menuCheckUpdate.SetTitle("Atualização disponível (" + latest + ")…")
 	}
 
 	var res int
 	if !manual {
-		res = messageBox("Koushin: Update available",
-			fmt.Sprintf("A new version of Koushin is available.\n\nCurrent: %s\nLatest: %s\n\nUpdate now?", cur, latest),
+		res = messageBox("Koushin: atualização disponível",
+			fmt.Sprintf("Uma nova versão do Koushin está disponível.\n\nAtual: %s\nMais recente: %s\n\nAtualizar agora?", cur, latest),
 			mbYesNo|mbIconQuestion)
 		if res != idYes {
 			return
 		}
 	} else {
-		res = messageBox("Koushin: Update available",
-			fmt.Sprintf("A new version of Koushin is available.\n\nCurrent: %s\nLatest: %s\n\nUpdate now?", cur, latest),
+		res = messageBox("Koushin: atualização disponível",
+			fmt.Sprintf("Uma nova versão do Koushin está disponível.\n\nAtual: %s\nMais recente: %s\n\nAtualizar agora?", cur, latest),
 			mbYesNo|mbIconQuestion)
 		if res != idYes {
 			return
@@ -3060,8 +3060,8 @@ func checkForUpdatesInteractive(ctx context.Context, manual bool) {
 	defer cancel()
 
 	if err := performSelfUpdate(uCtx, tag, url); err != nil {
-		messageBox("Koushin: Update failed",
-			"Failed to update:\n"+err.Error(),
+		messageBox("Koushin: falha na atualização",
+			"Falha ao atualizar:\n"+err.Error(),
 			mbOK|mbIconError)
 		return
 	}
@@ -3290,16 +3290,16 @@ func tsRange(now time.Time, cur, dur float64, paused bool) map[string]any {
 
 func buildActivity(title, episode, _clock, coverURL, _smallKey, _aniURL string, cur, dur float64, paused bool, rewatching bool) map[string]any {
 	details := title
-	epText := "Episode:"
+	epText := "Episódio:"
 	if strings.TrimSpace(episode) != "" {
-		epText = "Episode " + episode
+		epText = "Episódio " + episode
 	}
 	parts := make([]string, 0, 3)
 	if paused {
-		parts = append(parts, "Paused")
+		parts = append(parts, "Pausado")
 	}
 	if rewatching {
-		parts = append(parts, "Rewatching")
+		parts = append(parts, "Assistindo novamente")
 	}
 	parts = append(parts, epText)
 	state := strings.Join(parts, " - ")
@@ -3326,9 +3326,9 @@ func buildActivity(title, episode, _clock, coverURL, _smallKey, _aniURL string, 
 		assets["small_image"] = _smallKey
 		name := strings.TrimSpace(username)
 		if name == "" {
-			name = "AniList user"
+			name = "Usuário do AniList"
 		}
-		assets["small_text"] = name + " on AniList"
+		assets["small_text"] = name + " no AniList"
 	}
 
 	act := map[string]any{
@@ -3675,9 +3675,9 @@ func refreshAuthMenu() {
 
 	if menuLogin != nil && menuLogout != nil {
 		if hasToken {
-			title := "AniList: Signed in"
+			title := "AniList: conectado"
 			if username != "" {
-				title = "Signed in as @" + username
+				title = "Conectado como @" + username
 			}
 			menuLogin.SetTitle(title)
 			menuLogin.Disable()
@@ -3705,7 +3705,7 @@ func refreshAuthMenu() {
 				}
 			}
 		} else {
-			menuLogin.SetTitle("Sign in to AniList…")
+			menuLogin.SetTitle("Entrar no AniList…")
 			menuLogin.Enable()
 			menuLogout.Disable()
 
@@ -3726,9 +3726,9 @@ func refreshAuthMenu() {
 
 	if menuMALLogin != nil && menuMALLogout != nil {
 		if malHasToken {
-			title := "MyAnimeList: Signed in"
+			title := "MyAnimeList: conectado"
 			if malUsername != "" {
-				title = "MAL: Signed in as " + malUsername
+				title = "MAL: conectado como " + malUsername
 			}
 			menuMALLogin.SetTitle(title)
 			menuMALLogin.Disable()
@@ -3743,7 +3743,7 @@ func refreshAuthMenu() {
 				}
 			}
 		} else {
-			menuMALLogin.SetTitle("Sign in to MyAnimeList…")
+			menuMALLogin.SetTitle("Entrar no MyAnimeList…")
 			menuMALLogin.Enable()
 			menuMALLogout.Disable()
 
@@ -4066,7 +4066,7 @@ func startAniListSelector(initialQuery string, ua string, onSelect func(id int))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, `<!doctype html>
-<html><head><meta charset="utf-8"><title>Koushin · Select anime</title>
+<html><head><meta charset="utf-8"><title>Koushin · Selecionar anime</title>
 <style>
 body{font-family:system-ui;max-width:900px;margin:24px auto;line-height:1.4}
 input{width:100%;padding:10px;font-size:16px}
@@ -4075,9 +4075,9 @@ button{padding:6px 10px}
 small{color:#666}
 </style></head>
 <body>
-<h2>Select correct anime</h2>
-<p>Search AniList and click <b>Select</b>.</p>
-<input id="q" placeholder="Search…" />
+<h2>Selecionar anime correto</h2>
+<p>Pesquise no AniList e clique em <b>Selecionar</b>.</p>
+<input id="q" placeholder="Pesquisar…" />
 <div id="status"><small></small></div>
 <div id="results"></div>
 <script>
@@ -4090,31 +4090,31 @@ function esc(s){return (s||'').replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;","
 async function search() {
   const term = q.value.trim();
   if (!term) { results.innerHTML=''; statusEl.textContent=''; return; }
-  statusEl.textContent = 'Searching…';
+  statusEl.textContent = 'Pesquisando…';
   const res = await fetch('/api/search?q=' + encodeURIComponent(term));
   const data = await res.json();
-  if (!res.ok) { statusEl.textContent = data.error || 'Search failed'; return; }
-  statusEl.textContent = 'Results: ' + data.results.length;
+  if (!res.ok) { statusEl.textContent = data.error || 'Falha na pesquisa'; return; }
+  statusEl.textContent = 'Resultados: ' + data.results.length;
   results.innerHTML = data.results.map(m => {
-    const meta = [m.format, m.year ? ('year ' + m.year) : '', m.episodes ? (m.episodes + ' eps') : ''].filter(Boolean).join(' · ');
+    const meta = [m.format, m.year ? ('ano ' + m.year) : '', m.episodes ? (m.episodes + ' eps.') : ''].filter(Boolean).join(' · ');
     return '<div class="row">'
       + '<div style="flex:1">'
         + '<div><b>' + esc(m.title) + '</b></div>'
         + '<div><small>' + esc(meta) + ' · id ' + m.id + '</small></div>'
       + '</div>'
-      + '<button onclick="selectID(' + m.id + ')">Select</button>'
+      + '<button onclick="selectID(' + m.id + ')">Selecionar</button>'
     + '</div>';
   }).join('');
 }
 
 async function selectID(id) {
-  statusEl.textContent = 'Saving…';
+  statusEl.textContent = 'Salvando…';
   const res = await fetch('/api/select', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id})});
   const data = await res.json();
-  if (!res.ok) { statusEl.textContent = data.error || 'Failed'; return; }
+  if (!res.ok) { statusEl.textContent = data.error || 'Falha'; return; }
   // Try to close the tab. Some browsers will block window.close() for tabs
   // not opened by script; in that case we navigate to /done which tries again.
-  statusEl.textContent = 'Saved. Closing…';
+  statusEl.textContent = 'Salvo. Fechando…';
   try { window.open('', '_self'); window.close(); } catch (e) {}
   setTimeout(() => { try { window.open('', '_self'); window.close(); } catch (e) {} }, 250);
   window.location.replace('/done');
@@ -4132,16 +4132,16 @@ if (init) { q.value = init; search(); }
 	mux.HandleFunc("/done", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, `<!doctype html>
-<html><head><meta charset="utf-8"><title>Koushin · Done</title></head>
+<html><head><meta charset="utf-8"><title>Koushin · Concluído</title></head>
 <body style="font-family:system-ui;max-width:680px;margin:40px auto;line-height:1.5;text-align:center">
-<h2>Saved</h2>
-<p>Attempting to close this tab…</p>
+<h2>Salvo</h2>
+<p>Tentando fechar esta aba…</p>
 <script>
 setTimeout(() => {
   try { window.open('', '_self'); window.close(); } catch (e) {}
 }, 100);
 </script>
-<p><small>If it doesn't close automatically, you can close it now.</small></p>
+<p><small>Se ela não fechar automaticamente, você pode fechá-la agora.</small></p>
 </body></html>`)
 	})
 
@@ -4150,7 +4150,7 @@ setTimeout(() => {
 		q := strings.TrimSpace(r.URL.Query().Get("q"))
 		if q == "" {
 			w.WriteHeader(http.StatusBadRequest)
-			_ = json.NewEncoder(w).Encode(map[string]any{"error": "empty query"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "consulta vazia"})
 			return
 		}
 		c, cancel := context.WithTimeout(context.Background(), 8*time.Second)
@@ -4180,7 +4180,7 @@ setTimeout(() => {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != "POST" {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			_ = json.NewEncoder(w).Encode(map[string]any{"error": "method not allowed"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "método não permitido"})
 			return
 		}
 		var body struct {
@@ -4188,7 +4188,7 @@ setTimeout(() => {
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ID <= 0 {
 			w.WriteHeader(http.StatusBadRequest)
-			_ = json.NewEncoder(w).Encode(map[string]any{"error": "invalid id"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "ID inválido"})
 			return
 		}
 		select {
@@ -4241,7 +4241,7 @@ func startMALSelector(initialQuery string, clientID string, ua string, onSelect 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, `<!doctype html>
-<html><head><meta charset="utf-8"><title>Koushin · Select anime</title>
+<html><head><meta charset="utf-8"><title>Koushin · Selecionar anime</title>
 <style>
 body{font-family:system-ui;max-width:900px;margin:24px auto;line-height:1.4}
 input{width:100%;padding:10px;font-size:16px}
@@ -4250,9 +4250,9 @@ button{padding:6px 10px}
 small{color:#666}
 </style></head>
 <body>
-<h2>Select correct anime</h2>
-<p>Search MyAnimeList and click <b>Select</b>.</p>
-<input id="q" placeholder="Search…" />
+<h2>Selecionar anime correto</h2>
+<p>Pesquise no MyAnimeList e clique em <b>Selecionar</b>.</p>
+<input id="q" placeholder="Pesquisar…" />
 <div id="status"><small></small></div>
 <div id="results"></div>
 <script>
@@ -4265,29 +4265,29 @@ function esc(s){return (s||'').replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;","
 async function search() {
   const term = q.value.trim();
   if (!term) { results.innerHTML=''; statusEl.textContent=''; return; }
-  statusEl.textContent = 'Searching…';
+  statusEl.textContent = 'Pesquisando…';
   const res = await fetch('/api/search?q=' + encodeURIComponent(term));
   const data = await res.json();
-  if (!res.ok) { statusEl.textContent = data.error || 'Search failed'; return; }
-  statusEl.textContent = 'Results: ' + data.results.length;
+  if (!res.ok) { statusEl.textContent = data.error || 'Falha na pesquisa'; return; }
+  statusEl.textContent = 'Resultados: ' + data.results.length;
   results.innerHTML = data.results.map(m => {
-    const meta = [m.format, m.year ? ('year ' + m.year) : '', m.episodes ? (m.episodes + ' eps') : ''].filter(Boolean).join(' · ');
+    const meta = [m.format, m.year ? ('ano ' + m.year) : '', m.episodes ? (m.episodes + ' eps.') : ''].filter(Boolean).join(' · ');
     return '<div class="row">'
       + '<div style="flex:1">'
         + '<div><b>' + esc(m.title) + '</b></div>'
         + '<div><small>' + esc(meta) + ' · id ' + m.id + '</small></div>'
       + '</div>'
-      + '<button onclick="selectID(' + m.id + ')">Select</button>'
+      + '<button onclick="selectID(' + m.id + ')">Selecionar</button>'
     + '</div>';
   }).join('');
 }
 
 async function selectID(id) {
-  statusEl.textContent = 'Saving…';
+  statusEl.textContent = 'Salvando…';
   const res = await fetch('/api/select', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id})});
   const data = await res.json();
-  if (!res.ok) { statusEl.textContent = data.error || 'Failed'; return; }
-  statusEl.textContent = 'Saved. Closing…';
+  if (!res.ok) { statusEl.textContent = data.error || 'Falha'; return; }
+  statusEl.textContent = 'Salvo. Fechando…';
   try { window.open('', '_self'); window.close(); } catch (e) {}
   setTimeout(() => { try { window.open('', '_self'); window.close(); } catch (e) {} }, 250);
   window.location.replace('/done');
@@ -4305,16 +4305,16 @@ if (init) { q.value = init; search(); }
 	mux.HandleFunc("/done", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, `<!doctype html>
-<html><head><meta charset="utf-8"><title>Koushin · Done</title></head>
+<html><head><meta charset="utf-8"><title>Koushin · Concluído</title></head>
 <body style="font-family:system-ui;max-width:680px;margin:40px auto;line-height:1.5;text-align:center">
-<h2>Saved</h2>
-<p>Attempting to close this tab…</p>
+<h2>Salvo</h2>
+<p>Tentando fechar esta aba…</p>
 <script>
 setTimeout(() => {
   try { window.open('', '_self'); window.close(); } catch (e) {}
 }, 100);
 </script>
-<p><small>If it doesn't close automatically, you can close it now.</small></p>
+<p><small>Se ela não fechar automaticamente, você pode fechá-la agora.</small></p>
 </body></html>`)
 	})
 
@@ -4323,7 +4323,7 @@ setTimeout(() => {
 		q := strings.TrimSpace(r.URL.Query().Get("q"))
 		if q == "" {
 			w.WriteHeader(http.StatusBadRequest)
-			_ = json.NewEncoder(w).Encode(map[string]any{"error": "empty query"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "consulta vazia"})
 			return
 		}
 		c, cancel := context.WithTimeout(context.Background(), 8*time.Second)
@@ -4353,7 +4353,7 @@ setTimeout(() => {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != "POST" {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			_ = json.NewEncoder(w).Encode(map[string]any{"error": "method not allowed"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "método não permitido"})
 			return
 		}
 		var body struct {
@@ -4361,7 +4361,7 @@ setTimeout(() => {
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ID <= 0 {
 			w.WriteHeader(http.StatusBadRequest)
-			_ = json.NewEncoder(w).Encode(map[string]any{"error": "invalid id"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "ID inválido"})
 			return
 		}
 		select {
@@ -4435,17 +4435,17 @@ func oauthLogin(ctx context.Context) error {
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, `<!doctype html>
-<html><head><meta charset="utf-8"><title>Koushin · AniList Login</title></head>
+<html><head><meta charset="utf-8"><title>Koushin · Login do AniList</title></head>
 <body style="font-family:system-ui;max-width:680px;margin:40px auto;line-height:1.5;text-align:center">
-<h2>Completing login...</h2>
-<p id="status">Processing authentication...</p>
+<h2>Concluindo login…</h2>
+<p id="status">Processando autenticação…</p>
 <script>
 (function() {
 	// The access token is in the URL fragment (after #)
 	const hash = window.location.hash.substring(1); // Remove the leading #
 	
 	if (!hash) {
-		document.getElementById('status').textContent = 'No authentication data found. Please try again.';
+		document.getElementById('status').textContent = 'Nenhum dado de autenticação encontrado. Tente novamente.';
 		return;
 	}
 	
@@ -4454,7 +4454,7 @@ func oauthLogin(ctx context.Context) error {
 	const error = params.get('error');
 	
 	if (error) {
-		document.getElementById('status').textContent = 'Authentication failed: ' + error;
+		document.getElementById('status').textContent = 'Falha na autenticação: ' + error;
 		fetch('/submit', {
 			method: 'POST',
 			headers: {'Content-Type': 'application/json'},
@@ -4464,23 +4464,23 @@ func oauthLogin(ctx context.Context) error {
 	}
 	
 	if (token) {
-		document.getElementById('status').textContent = 'Login successful! Closing...';
+		document.getElementById('status').textContent = 'Login realizado com sucesso! Fechando…';
 		fetch('/submit', {
 			method: 'POST',
 			headers: {'Content-Type': 'application/json'},
 			body: JSON.stringify({token: token})
 		}).then(response => {
 			if (response.ok) {
-				document.getElementById('status').textContent = 'Login successful! You can close this window.';
+				document.getElementById('status').textContent = 'Login realizado com sucesso! Você pode fechar esta janela.';
 				setTimeout(() => window.close(), 1500);
 			} else {
-				document.getElementById('status').textContent = 'Login failed. Please try again.';
+				document.getElementById('status').textContent = 'Falha no login. Tente novamente.';
 			}
 		}).catch(err => {
-			document.getElementById('status').textContent = 'Error: ' + err.message;
+			document.getElementById('status').textContent = 'Erro: ' + err.message;
 		});
 	} else {
-		document.getElementById('status').textContent = 'No access token found. Please try again.';
+		document.getElementById('status').textContent = 'Nenhum token de acesso encontrado. Tente novamente.';
 	}
 })();
 </script>
@@ -4489,7 +4489,7 @@ func oauthLogin(ctx context.Context) error {
 
 	mux.HandleFunc("/submit", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "método não permitido", http.StatusMethodNotAllowed)
 			return
 		}
 
@@ -4859,18 +4859,18 @@ func malOAuthLogin(ctx context.Context, cfg Config) error {
 	cbDone := false
 
 	successHTML := `<!doctype html>
-<html><head><meta charset="utf-8"><title>Koushin · MAL Login</title></head>
+<html><head><meta charset="utf-8"><title>Koushin · Login do MAL</title></head>
 <body style="font-family:system-ui;max-width:680px;margin:40px auto;line-height:1.5;text-align:center">
-<h2>Login successful</h2>
-<p>You can close this tab now.</p>
+<h2>Login realizado com sucesso</h2>
+<p>Você pode fechar esta aba agora.</p>
 <script>setTimeout(() => { try { window.open('', '_self'); window.close(); } catch (e) {} }, 200);</script>
 </body></html>`
 
 	processingHTML := `<!doctype html>
-<html><head><meta charset="utf-8"><title>Koushin · MAL Login</title></head>
+<html><head><meta charset="utf-8"><title>Koushin · Login do MAL</title></head>
 <body style="font-family:system-ui;max-width:680px;margin:40px auto;line-height:1.5;text-align:center">
-<h2>Completing login…</h2>
-<p>Please return to Koushin in a moment.</p>
+<h2>Concluindo login…</h2>
+<p>Volte ao Koushin em alguns instantes.</p>
 </body></html>`
 
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
@@ -4900,18 +4900,18 @@ func malOAuthLogin(ctx context.Context, cfg Config) error {
 		q := r.URL.Query()
 		if e := strings.TrimSpace(q.Get("error")); e != "" {
 			sendResult(fmt.Errorf("mal oauth error: %s", e))
-			io.WriteString(w, "Login failed. You can close this tab.")
+			io.WriteString(w, "Falha no login. Você pode fechar esta aba.")
 			return
 		}
 		if gotState := strings.TrimSpace(q.Get("state")); gotState != state {
 			sendResult(errors.New("mal oauth: state mismatch"))
-			io.WriteString(w, "Login failed (state mismatch). You can close this tab.")
+			io.WriteString(w, "Falha no login (estado incompatível). Você pode fechar esta aba.")
 			return
 		}
 		code := strings.TrimSpace(q.Get("code"))
 		if code == "" {
 			sendResult(errors.New("mal oauth: missing code"))
-			io.WriteString(w, "Login failed (missing code). You can close this tab.")
+			io.WriteString(w, "Falha no login (código ausente). Você pode fechar esta aba.")
 			return
 		}
 
@@ -4921,10 +4921,10 @@ func malOAuthLogin(ctx context.Context, cfg Config) error {
 		if err != nil {
 			sendResult(err)
 			io.WriteString(w, `<!doctype html>
-<html><head><meta charset="utf-8"><title>Koushin · MAL Login</title></head>
+<html><head><meta charset="utf-8"><title>Koushin · Login do MAL</title></head>
 <body style="font-family:system-ui;max-width:680px;margin:40px auto;line-height:1.5;text-align:center">
-<h2>Login failed</h2>
-<p>Could not complete token exchange.</p>
+<h2>Falha no login</h2>
+<p>Não foi possível concluir a troca do token.</p>
 <p><small>`+html.EscapeString(err.Error())+`</small></p>
 </body></html>`)
 			return
@@ -4956,10 +4956,10 @@ func malOAuthLogin(ctx context.Context, cfg Config) error {
 
 		sendResult(nil)
 		io.WriteString(w, `<!doctype html>
-<html><head><meta charset="utf-8"><title>Koushin · MAL Login</title></head>
+<html><head><meta charset="utf-8"><title>Koushin · Login do MAL</title></head>
 <body style="font-family:system-ui;max-width:680px;margin:40px auto;line-height:1.5;text-align:center">
-<h2>Login successful</h2>
-<p>You can close this tab now.</p>
+<h2>Login realizado com sucesso</h2>
+<p>Você pode fechar esta aba agora.</p>
 <script>setTimeout(() => { try { window.open('', '_self'); window.close(); } catch (e) {} }, 200);</script>
 </body></html>`)
 	})
@@ -5260,56 +5260,56 @@ func onReadyTray(ctx context.Context, cancel context.CancelFunc) {
 	systray.SetTooltip("Koushin")
 
 	menuDiscordRPC = systray.AddMenuItemCheckbox(
-		"Enable Discord Rich Presence",
-		"Toggle Discord Rich Presence updates (tray + AniList still work)",
+		"Ativar Rich Presence do Discord",
+		"Ativa ou desativa as atualizações do Rich Presence (bandeja + AniList continuam funcionando)",
 		store.DiscordRPC,
 	)
 	menuToggleProfile = systray.AddMenuItemCheckbox(
-		"Show AniList profile in Discord RPC",
-		"Toggle AniList profile small icon",
+		"Mostrar perfil do AniList no Discord",
+		"Ativa ou desativa o pequeno ícone do perfil do AniList",
 		store.ShowAniProfile,
 	)
 	systray.AddSeparator()
 
-	menuLogin = systray.AddMenuItem("Sign in to AniList…", "Authenticate this device with AniList")
-	menuLogout = systray.AddMenuItem("Sign out of AniList", "Forget saved AniList token")
-	menuCorrectAnime = systray.AddMenuItem("Select correct anime…", "Manually select the AniList anime for the current file")
+	menuLogin = systray.AddMenuItem("Entrar no AniList…", "Autenticar este dispositivo no AniList")
+	menuLogout = systray.AddMenuItem("Sair do AniList", "Esquecer o token salvo do AniList")
+	menuCorrectAnime = systray.AddMenuItem("Selecionar anime correto…", "Selecionar manualmente o anime do AniList para o arquivo atual")
 	menuCorrectAnime.Disable()
 	menuAniListTrack = systray.AddMenuItemCheckbox(
-		"Enable AniList tracking",
-		"Toggle whether Koushin updates your AniList progress while watching",
+		"Ativar acompanhamento do AniList",
+		"Define se o Koushin atualiza seu progresso no AniList enquanto você assiste",
 		store.AniListTracking,
 	)
 	menuFillerWarn = systray.AddMenuItemCheckbox(
-		"Warn for filler episodes",
-		"Show a warning when watching filler episodes (when available)",
+		"Avisar sobre episódios filler",
+		"Mostrar um aviso ao assistir episódios filler (quando disponível)",
 		store.WarnFiller,
 	)
 	systray.AddSeparator()
 
-	menuMALLogin = systray.AddMenuItem("Sign in to MyAnimeList…", "Authenticate this device with MyAnimeList")
-	menuMALLogout = systray.AddMenuItem("Sign out of MyAnimeList", "Forget saved MyAnimeList token")
-	menuMALCorrectAnime = systray.AddMenuItem("Select correct anime (MAL)…", "Manually select the MyAnimeList anime for the current file")
+	menuMALLogin = systray.AddMenuItem("Entrar no MyAnimeList…", "Autenticar este dispositivo no MyAnimeList")
+	menuMALLogout = systray.AddMenuItem("Sair do MyAnimeList", "Esquecer o token salvo do MyAnimeList")
+	menuMALCorrectAnime = systray.AddMenuItem("Selecionar anime correto (MAL)…", "Selecionar manualmente o anime do MyAnimeList para o arquivo atual")
 	menuMALCorrectAnime.Disable()
 	menuMALTrack = systray.AddMenuItemCheckbox(
-		"Enable MyAnimeList tracking",
-		"Toggle whether Koushin updates your MyAnimeList progress while watching",
+		"Ativar acompanhamento do MyAnimeList",
+		"Define se o Koushin atualiza seu progresso no MyAnimeList enquanto você assiste",
 		store.MALTracking,
 	)
 	systray.AddSeparator()
 
-	menuSimul = systray.AddMenuItem("Simulwatching", "Host or join a Simulwatching session")
-	menuSimulHost = menuSimul.AddSubMenuItem("Host a Simul…", "Host a session and share your watch state")
-	menuSimulJoin = menuSimul.AddSubMenuItem("Join a Simul…", "Join a friend's hosted session")
-	menuSimulStop = menuSimul.AddSubMenuItem("Stop Simulwatching", "Stop hosting/joining")
-	menuSimulStatus = menuSimul.AddSubMenuItem("Status: Off", "Shows current Simulwatching state")
+	menuSimul = systray.AddMenuItem("Simulwatching", "Hospedar ou entrar em uma sessão de Simulwatching")
+	menuSimulHost = menuSimul.AddSubMenuItem("Hospedar uma sessão…", "Hospedar uma sessão e compartilhar seu estado de reprodução")
+	menuSimulJoin = menuSimul.AddSubMenuItem("Entrar em uma sessão…", "Entrar na sessão hospedada por um amigo")
+	menuSimulStop = menuSimul.AddSubMenuItem("Parar o Simulwatching", "Parar de hospedar ou participar")
+	menuSimulStatus = menuSimul.AddSubMenuItem("Status: Desligado", "Mostra o estado atual do Simulwatching")
 	menuSimulStatus.Disable()
 	store.mu.RLock()
 	joinSync := store.SimulJoinSync
 	store.mu.RUnlock()
 	menuSimulJoinSync = menuSimul.AddSubMenuItemCheckbox(
-		"Sync my AniList",
-		"When joined, sync your own AniList based on the host's 80% progress events",
+		"Sincronizar meu AniList",
+		"Quando conectado, sincroniza seu AniList com base nos eventos de 80% de progresso do anfitrião",
 		joinSync,
 	)
 	simulLoadSettingsFromStore()
@@ -5317,15 +5317,15 @@ func onReadyTray(ctx context.Context, cancel context.CancelFunc) {
 	systray.AddSeparator()
 
 	menuRunOnStartup = systray.AddMenuItemCheckbox(
-		"Run on Windows startup",
-		"Automatically start Koushin when you sign in to Windows",
+		"Executar ao iniciar o Windows",
+		"Iniciar o Koushin automaticamente ao entrar no Windows",
 		store.RunOnStartup,
 	)
 	systray.AddSeparator()
 
-	menuCheckUpdate = systray.AddMenuItem("Check for updates…", "Check if a newer Koushin version is available")
+	menuCheckUpdate = systray.AddMenuItem("Verificar atualizações…", "Verificar se há uma versão mais recente do Koushin")
 	systray.AddSeparator()
-	menuQuit = systray.AddMenuItem("Quit", "Exit Koushin")
+	menuQuit = systray.AddMenuItem("Sair", "Fechar o Koushin")
 
 	refreshAuthMenu()
 
@@ -5361,13 +5361,13 @@ func onReadyTray(ctx context.Context, cancel context.CancelFunc) {
 					loginCancelFunc = nil
 					loginCancelMu.Unlock()
 
-					menuLogin.SetTitle("Sign in to AniList…")
+					menuLogin.SetTitle("Entrar no AniList…")
 					menuLogin.Enable()
 					continue
 				}
 				loginCancelMu.Unlock()
 
-				menuLogin.SetTitle("Cancel login…")
+				menuLogin.SetTitle("Cancelar login…")
 
 				loginCtx, loginCancel := context.WithCancel(ctx)
 				loginCancelMu.Lock()
@@ -5424,7 +5424,7 @@ func onReadyTray(ctx context.Context, cancel context.CancelFunc) {
 					malLoginCancelFunc = nil
 					malLoginCancelMu.Unlock()
 
-					menuMALLogin.SetTitle("Sign in to MyAnimeList…")
+					menuMALLogin.SetTitle("Entrar no MyAnimeList…")
 					menuMALLogin.Enable()
 					continue
 				}
@@ -5433,14 +5433,14 @@ func onReadyTray(ctx context.Context, cancel context.CancelFunc) {
 				cfg2 := loadConfig()
 				if strings.TrimSpace(cfg2.MALClientID) == "" || strings.TrimSpace(cfg2.MALClientSecret) == "" {
 					messageBox("Koushin: MyAnimeList",
-						"Missing MAL client id/secret.\n\n"+
+						"ID/segredo do cliente MAL ausente.\n\n"+
 							"Set env vars MAL_CLIENT_ID and MAL_CLIENT_SECRET, OR build with:\n"+
 							"  -ldflags \"-X main.buildMALClientID=... -X main.buildMALClientSecret=...\"",
 						mbOK|mbIconError)
 					continue
 				}
 
-				menuMALLogin.SetTitle("Cancel login…")
+				menuMALLogin.SetTitle("Cancelar login…")
 
 				loginCtx, loginCancel := context.WithCancel(ctx)
 				malLoginCancelMu.Lock()
@@ -5461,7 +5461,7 @@ func onReadyTray(ctx context.Context, cancel context.CancelFunc) {
 						} else {
 							fmt.Println("MAL login failed:", err)
 							logAppend("MAL login failed:", err.Error())
-							messageBox("Koushin: MyAnimeList", "MyAnimeList login failed:\n\n"+err.Error(), mbOK|mbIconError)
+							messageBox("Koushin: MyAnimeList", "Falha no login do MyAnimeList:\n\n"+err.Error(), mbOK|mbIconError)
 						}
 					} else {
 						fmt.Println("MAL login succeeded")
@@ -5544,7 +5544,7 @@ func onReadyTray(ctx context.Context, cancel context.CancelFunc) {
 				store.Save()
 				if err := setWindowsRunOnStartup(on); err != nil {
 					logAppend("startup: failed to update HKCU Run entry: ", err.Error())
-					messageBox("Koushin: Startup setting failed", "Could not update Windows startup setting:\n\n"+err.Error(), mbOK|mbIconError)
+					messageBox("Koushin: falha na configuração de inicialização", "Não foi possível atualizar a configuração de inicialização do Windows:\n\n"+err.Error(), mbOK|mbIconError)
 				}
 
 			case <-menuSimulJoinSync.ClickedCh:
@@ -5609,7 +5609,7 @@ func onReadyTray(ctx context.Context, cancel context.CancelFunc) {
 				}
 				cfg2 := loadConfig()
 				if strings.TrimSpace(cfg2.MALClientID) == "" {
-					messageBox("Koushin: MyAnimeList", "Missing MAL client id.\n\nSet the MAL_CLIENT_ID environment variable, then try again.", mbOK|mbIconError)
+					messageBox("Koushin: MyAnimeList", "ID do cliente MAL ausente.\n\nDefina a variável de ambiente MAL_CLIENT_ID e tente novamente.", mbOK|mbIconError)
 					continue
 				}
 				go func(seriesKey string, initialQ string) {
