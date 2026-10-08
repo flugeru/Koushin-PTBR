@@ -177,7 +177,7 @@ O Koushin armazena configurações e associações na pasta de configuração do
 
 ```bash
 git clone https://github.com/flugeru/Koushin-PTBR.git
-cd Koushin
+cd Koushin-PTBR
 go mod tidy
 go build -trimpath -ldflags="-H=windowsgui" -o Koushin.exe
 ```
