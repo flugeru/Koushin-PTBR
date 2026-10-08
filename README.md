@@ -42,7 +42,7 @@ A ideia é simples: **baixar → executar → esquecer que está ali**.
 
 ## Download / instalação 📥
 
-1. Acesse **Releases**: https://github.com/hyuzipt/Koushin/releases/latest
+1. Acesse **Releases**: https://github.com/flugeru/Koushin-PTBR/releases/tag/v1.0.0
 2. Baixe **`Koushin.exe`**
 3. Execute (não é necessário instalar)
 
@@ -80,7 +80,7 @@ Clique com o botão direito no ícone da bandeja para acessar recursos como:
 - **Ativar Rich Presence do Discord**
 - **Mostrar perfil do AniList no Discord**
 - **Avisar sobre episódios filler**
-- **Selecionar anime correto…** (correção manual)
+- **Selecionar anime acorreto…** (correção manual)
 - **Executar ao iniciar o Windows**
 - **Simulwatching** (Hospedar / Entrar / Parar)
 - **Verificar atualizações…**
@@ -176,7 +176,7 @@ O Koushin armazena configurações e associações na pasta de configuração do
 ## Compilar a partir do código-fonte 🧰
 
 ```bash
-git clone https://github.com/hyuzipt/Koushin.git
+git clone https://github.com/flugeru/Koushin-PTBR.git
 cd Koushin
 go mod tidy
 go build -trimpath -ldflags="-H=windowsgui" -o Koushin.exe
